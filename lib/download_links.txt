@@ -1,0 +1,5 @@
+https://commons.apache.org/proper/commons-cli/download_cli.cgi
+	http://www-eu.apache.org/dist/commons/cli/binaries/commons-cli-1.4-bin.zip
+
+http://repo1.maven.org/maven2/com/esotericsoftware/yamlbeans/yamlbeans/1.13/
+	http://repo1.maven.org/maven2/com/esotericsoftware/yamlbeans/yamlbeans/1.13/yamlbeans-1.13.jar

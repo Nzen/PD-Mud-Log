@@ -1,0 +1,20 @@
+%YAML 1.1
+---
+pd_left:
+    - mud-log
+    - bunsen-honeydew
+date: 2018-01-07
+...
+---
+content:
+    banana fofana
+    mi mi momana, hanna
+...
+---
+frank
+frazatta
+
+<a>gregory mendel</a>
+
+### a yaml comment, until I escape it
+...

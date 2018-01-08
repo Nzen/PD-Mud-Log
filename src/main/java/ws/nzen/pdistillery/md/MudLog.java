@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
+import com.esotericsoftware.yamlbeans.YamlReader;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -20,7 +21,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
 /** Changes relevant yaml with markdown to html yaml */
-public class Orwell
+public class MudLog
 {
 	private static final String cl = "o.";
 	static final String mdConfigFlag = "m", yamlConfigFlag = "y",
@@ -56,9 +57,6 @@ public class Orwell
 		Rewrite the transformed file in the appropriate place
 		==
 		180101 next:
-		honor output folder arg
-		honor the yaml file arg
-		-
 		write a two document yaml
 		init a yaml reader
 		provide a file
@@ -67,7 +65,7 @@ public class Orwell
 		https://github.com/vsch/flexmark-java/tree/master/flexmark-java-samples/src/com/vladsch/flexmark/samples
 		*/
 		CommandLine userInput = prepCli( prepCliParser(), args );
-		Orwell doesStuff = prepDoer( userInput );
+		MudLog doesStuff = prepDoer( userInput );
 		if ( userInput != null )
 		{
 			doesStuff.translateMarkdownOf( userInput
@@ -111,7 +109,7 @@ public class Orwell
 			userInput = cliRegex.parse( knowsCliDtd, args );
 			if ( userInput.hasOption( helpFlag ) )
 			{
-				new HelpFormatter().printHelp( "PD-Orwell", knowsCliDtd );
+				new HelpFormatter().printHelp( "PD-MudLog", knowsCliDtd );
 			}
 		}
 		catch ( ParseException pe )
@@ -122,17 +120,17 @@ public class Orwell
 	}
 
 
-	public static Orwell prepDoer( CommandLine userInput )
+	public static MudLog prepDoer( CommandLine userInput )
 	{
-		Orwell doesStuff;
+		MudLog doesStuff;
 		if ( userInput != null && userInput.hasOption( verboseFlag ) )
 		 {
 			boolean wantsLogging = true;
-			doesStuff = new Orwell( wantsLogging );
+			doesStuff = new MudLog( wantsLogging );
 		 }
 		else
 		{
-			 doesStuff = new Orwell();
+			 doesStuff = new MudLog();
 		}
 		if ( userInput != null )
 		{
@@ -144,11 +142,13 @@ public class Orwell
 			}
 			if ( userInput.hasOption( yamlConfigFlag ) )
 			{
-				System.out.println( cl +"pd didnt save yaml config yet" );
+				doesStuff.setYamlPath( userInput
+						.getOptionValue( yamlConfigFlag, currentDir ) );
 			}
 			if ( userInput.hasOption( outputFolderPath ) )
 			{
-				System.out.println( cl +"pd didnt save yaml config yet" );
+				doesStuff.setOutputPath( userInput
+						.getOptionValue( outputFolderPath, currentDir ) );
 			}
 		}
 		doesStuff.adoptConfiguration();
@@ -156,18 +156,19 @@ public class Orwell
 	}
 
 
-	public Orwell()
+	public MudLog()
 	{
 		this( false );
 	}
 
 
-	public Orwell( boolean noiseTolerance )
+	public MudLog( boolean noiseTolerance )
 	{
 		verbose = noiseTolerance;
 	}
 
 
+	// IMPROVE these are all the same, but it feels wasteful to make an enum just for this
 	public void setMarkdownPath( String path )
 	{
 		final String here = cl +"smp ";
@@ -185,30 +186,99 @@ public class Orwell
 		}
 		catch ( InvalidPathException ipe )
 		{
-			System.err.println( here +"invalid md dir "+ ipe );
+			System.err.println( here +"invalid md path "+ ipe );
 		}
 	}
-	//yml output
+
+
+	public void setYamlPath( String path )
+	{
+		final String here = cl +"smp ";
+		try
+		{
+			Path place = Paths.get( path );
+			if ( place.toFile().isFile() )
+			{
+				yamlConfig = place;
+			}
+			else if ( verbose )
+			{
+				System.err.println( here +"yaml config must be a file" );
+			}
+		}
+		catch ( InvalidPathException ipe )
+		{
+			System.err.println( here +"invalid yaml path "+ ipe );
+		}
+	}
+
+
+	public void setOutputPath( String path )
+	{
+		final String here = cl +"smp ";
+		try
+		{
+			Path place = Paths.get( path );
+			if ( place.toFile().isDirectory() )
+			{
+				outputFolder = place;
+			}
+			else if ( verbose )
+			{
+				System.err.println( here +"output must be a folder" );
+			}
+		}
+		catch ( InvalidPathException ipe )
+		{
+			System.err.println( here +"invalid out dir "+ ipe );
+		}
+	}
 
 
 	/** cleanup after config changes */
 	public void adoptConfiguration()
 	{
+		System.out.println( cl +"ad didnt reify config yet" );
 		// configure yaml thing
 		// configure md thing
-		System.out.println( cl +"ad didnt reify config yet" );
 	}
 
 
 	/** translate the md of the yaml files specified if appropriate */
 	public void translateMarkdownOf( String[] paths )
 	{
-		System.out.println( cl +"tmo didnt translate yet" );
+		final String here = cl +"tmo ";
+		System.out.println( here +"didnt translate yet" );
 		if ( paths != null )
 		{
 			for ( String path : paths )
 			{
 				System.out.println( cl +"tmo trans "+ path );
+				try ( FileReader charLoader = new FileReader( path ) )
+				{
+					YamlReader loadsInfo = new YamlReader( charLoader );
+					Object document;
+					while ( true )
+					{
+						document = loadsInfo.read();
+						if ( document != null )
+						{
+							break; // end of file
+						}
+						else
+						{
+							System.out.println( document );
+						}
+					}
+				}
+				catch ( FileNotFoundException fnfe )
+				{
+					System.err.println( here +"invalid path "+ fnfe );
+				}
+				catch ( IOException ie )
+				{
+					System.err.println( here +"file i/o problem "+ ie );
+				}
 			}
 		}
 	}
