@@ -25,10 +25,11 @@ public class Orwell
 	private static final String cl = "o.";
 	static final String mdConfigFlag = "m", yamlConfigFlag = "y",
 			filesToProcessFlag = "f", verboseFlag = "v",
-			helpFlag = "h";
+			outputFolderPath = "o", helpFlag = "h";
 	protected boolean verbose;
 	protected Path markdownConfig = null;
 	protected Path yamlConfig = null;
+	protected Path outputFolder = null;
 
 	public static void main( String[] args )
 	{
@@ -45,7 +46,7 @@ public class Orwell
 		strip md from plugin list
 		rewrite in the current folder
 		==
-		Show the config path vs the list of files
+		X Show the config path vs the list of files
 		Configure yaml?
 		Show the yaml of a file
 		Ensure appropriate place exists
@@ -53,6 +54,16 @@ public class Orwell
 		Configure md
 		Show md transformed yaml content
 		Rewrite the transformed file in the appropriate place
+		==
+		180101 next:
+		honor output folder arg
+		honor the yaml file arg
+		-
+		write a two document yaml
+		init a yaml reader
+		provide a file
+		show the contents
+
 		https://github.com/vsch/flexmark-java/tree/master/flexmark-java-samples/src/com/vladsch/flexmark/samples
 		*/
 		CommandLine userInput = prepCli( prepCliParser(), args );
@@ -74,6 +85,8 @@ public class Orwell
 				+ " (ex C:\\Program Files\\apache\\tomcat.txt)" );
 		knowsCliDtd.addOption( yamlConfigFlag, needsEmbelishment, "yaml config path"
 				+ " (ex /home/theusername/tmp/ff.json)" );
+		knowsCliDtd.addOption( outputFolderPath, needsEmbelishment,
+				"path of folder to write results" );
 		knowsCliDtd.addOption( filesToProcessFlag, needsEmbelishment,
 				"paths of files to process" );
 		knowsCliDtd.addOption( verboseFlag, ! needsEmbelishment,
@@ -123,12 +136,17 @@ public class Orwell
 		}
 		if ( userInput != null )
 		{
+			final String currentDir = "";
 			if ( userInput.hasOption( mdConfigFlag ) )
 			{
-				System.out.println( cl +"pd didnt save md config yet" );
-				doesStuff.setMarkdownPath( "" ); // FIX
+				doesStuff.setMarkdownPath( userInput
+						.getOptionValue( mdConfigFlag, currentDir ) );
 			}
 			if ( userInput.hasOption( yamlConfigFlag ) )
+			{
+				System.out.println( cl +"pd didnt save yaml config yet" );
+			}
+			if ( userInput.hasOption( outputFolderPath ) )
 			{
 				System.out.println( cl +"pd didnt save yaml config yet" );
 			}
@@ -152,9 +170,25 @@ public class Orwell
 
 	public void setMarkdownPath( String path )
 	{
-		// paths.get
+		final String here = cl +"smp ";
+		try
+		{
+			Path place = Paths.get( path );
+			if ( place.toFile().isFile() )
+			{
+				markdownConfig = place;
+			}
+			else if ( verbose )
+			{
+				System.err.println( here +"md config must be a file" );
+			}
+		}
+		catch ( InvalidPathException ipe )
+		{
+			System.err.println( here +"invalid md dir "+ ipe );
+		}
 	}
-	//yml
+	//yml output
 
 
 	/** cleanup after config changes */

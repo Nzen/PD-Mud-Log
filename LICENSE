@@ -1,7 +1,8 @@
 
 Pd-Orwell
 
-Copyright Nicholas Prado
+Copyright Nicholas Prado, released under terms of LGPL v3.0, as described at https://www.gnu.org/licenses/lgpl-3.0.txt
 
-Released under terms of LGPL v3.0, as described at https://www.gnu.org/licenses/lgpl-3.0.txt
+Pd-Orwell relies on YamlBeans, which is copyright Nathan Sweet and Ola Bini, released under MIT license terms.
+
 
