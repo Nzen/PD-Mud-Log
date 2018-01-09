@@ -11,10 +11,10 @@ content:
     mi mi momana, hanna
 ...
 ---
-frank
+"frank
 frazatta
-
+\n\n
 <a>gregory mendel</a>
-
-### a yaml comment, until I escape it
+\n\n
+### a yaml comment, until I escape it"
 ...

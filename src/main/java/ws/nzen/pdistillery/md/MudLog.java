@@ -6,13 +6,18 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 
+import com.esotericsoftware.yamlbeans.YamlConfig;
 import com.esotericsoftware.yamlbeans.YamlReader;
+import com.esotericsoftware.yamlbeans.YamlWriter;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -27,6 +32,7 @@ public class MudLog
 	static final String mdConfigFlag = "m", yamlConfigFlag = "y",
 			filesToProcessFlag = "f", verboseFlag = "v",
 			outputFolderPath = "o", helpFlag = "h";
+	static final String pluginKey = "pd_left", selfAsPlugin = "mud-log";
 	protected boolean verbose;
 	protected Path markdownConfig = null;
 	protected Path yamlConfig = null;
@@ -56,11 +62,8 @@ public class MudLog
 		Show md transformed yaml content
 		Rewrite the transformed file in the appropriate place
 		==
-		180101 next:
-		write a two document yaml
-		init a yaml reader
-		provide a file
-		show the contents
+		180108 next:
+		output (echo) provided yaml
 
 		https://github.com/vsch/flexmark-java/tree/master/flexmark-java-samples/src/com/vladsch/flexmark/samples
 		*/
@@ -248,32 +251,89 @@ public class MudLog
 	public void translateMarkdownOf( String[] paths )
 	{
 		final String here = cl +"tmo ";
-		System.out.println( here +"didnt translate yet" );
 		if ( paths != null )
 		{
+			YamlReader loadsInfo;
+			YamlWriter burysInfo;
+			// ASK perhaps move to adoptConfiguration()
+			YamlConfig docConfig = new YamlConfig();
+			docConfig.writeConfig.setExplicitFirstDocument( true );
+			docConfig.writeConfig.setExplicitEndDocument( true );
 			for ( String path : paths )
 			{
 				System.out.println( cl +"tmo trans "+ path );
-				try ( FileReader charLoader = new FileReader( path ) )
+				try ( FileReader charLoader = new FileReader( path );
+						FileWriter charDump = new FileWriter(
+							outputFolder.toString() + File.separator
+							+ Paths.get( path ).getFileName() ) )
 				{
-					YamlReader loadsInfo = new YamlReader( charLoader );
+					if ( verbose )
+					{
+						System.out.println( here +"new file is "
+								+ outputFolder.toString() + File.separator
+								+ Paths.get( path ).getFileName() );
+					}
+					loadsInfo = new YamlReader( charLoader );
+					burysInfo = new YamlWriter( charDump );
 					Object document;
+					Map docAttributes;
+					boolean translateMd = false;
 					while ( true )
 					{
 						document = loadsInfo.read();
-						if ( document != null )
+						if ( document == null )
 						{
 							break; // end of file
 						}
 						else
 						{
 							System.out.println( document );
+							if ( document instanceof Map )
+							{
+								docAttributes = (Map)document;
+								if ( docAttributes.containsKey( pluginKey ) )
+								{
+									List plugins = (List)(docAttributes.get( pluginKey ));
+									// IMPROVE handle class cast ex
+									int indOfSelf = plugins.indexOf( selfAsPlugin );
+									if ( indOfSelf >= 0 )
+									{
+										plugins.remove( indOfSelf );
+										docAttributes.put( pluginKey, plugins );
+										translateMd = true;
+										
+									}
+								}
+								burysInfo.write( document );
+							}
+							else if ( translateMd )
+							{
+								// check for content thing or next doc
+								if ( document instanceof String )
+								{
+									// this is our markdown
+									String content = (String)document;
+									content = content.toUpperCase();
+									System.out.println( here +"didnt translate yet" );
+									burysInfo.write( content );
+								}
+								else
+								{
+									burysInfo.write( document );
+								}
+							}
+							else
+							{
+								burysInfo.write( document );
+							}
 						}
 					}
+					loadsInfo.close();
+					burysInfo.close();
 				}
-				catch ( FileNotFoundException fnfe )
+				catch ( FileNotFoundException | InvalidPathException ie )
 				{
-					System.err.println( here +"invalid path "+ fnfe );
+					System.err.println( here +"invalid path "+ ie );
 				}
 				catch ( IOException ie )
 				{
