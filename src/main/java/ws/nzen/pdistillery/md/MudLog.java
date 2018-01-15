@@ -8,6 +8,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -43,35 +44,13 @@ public class MudLog
 	protected MutableDataSet mdSettings = null;
 	protected YamlConfig docConfig = null;
 
+	/** read configs, interpret markdown, copy to output folder */
 	public static void main( String[] args )
 	{
 		/*
-		pick out the md config from the args (maybe use a c cli)
-		send the rest of args to become a list of paths
-		*
-		prep the md thing
-		*
-		for each file
-		get yaml thing of file
-		(if latest plugin is md)
-		provide contents to md thing
-		strip md from plugin list
-		rewrite in the current folder
-		==
-		X Show the config path vs the list of files
-		Configure yaml?
-		Show the yaml of a file
-		Ensure appropriate place exists
-		Rewrite the unchanged file in the appropriate place
-		Configure md
-		Show md transformed yaml content
-		Rewrite the transformed file in the appropriate place
-		==
-		180108 next:
-		refine output yaml
-		import md lib
-		(config markdown?)
-		send content through markdown
+		180114 next:
+		configure markdown
+		refactor translateMo()
 
 		https://github.com/vsch/flexmark-java/tree/master/flexmark-java-samples/src/com/vladsch/flexmark/samples
 		*/
@@ -162,7 +141,6 @@ public class MudLog
 						.getOptionValue( outputFolderPath, currentDir ) );
 			}
 		}
-		doesStuff.adoptConfiguration();
 		return doesStuff;
 	}
 
@@ -257,11 +235,11 @@ public class MudLog
 		// configure yaml thing from actual config
 		docConfig.writeConfig.setExplicitFirstDocument( true );
 		docConfig.writeConfig.setExplicitEndDocument( true );
-		// configure md thing
 		if ( mdSettings == null )
 		{
 			mdSettings = new MutableDataSet();
 		}
+		// configure md thing from actual config
 	}
 
 
@@ -295,60 +273,92 @@ public class MudLog
 					burysInfo = new YamlWriter( charDump );
 					Object document;
 					Map docAttributes;
-					boolean translateMd = false;
-					while ( true )
+					// assert doc 1 is a map, doc 2 is a scalar literal
+					document = loadsInfo.read();
+					if ( document == null || ! (document instanceof Map) )
 					{
-						document = loadsInfo.read();
-						if ( document == null )
-						{
-							break; // end of file
-						}
-						else
+						loadsInfo.close();
+						copyFileWithoutChange(new FileReader( path ), charDump);
+						continue;
+					}
+					else
+					{
+						if ( verbose )
 						{
 							System.out.println( document );
-							if ( document instanceof Map )
+						}
+						docAttributes = (Map)document;
+						if ( docAttributes.containsKey( pluginKey ) )
+						{
+							List plugins = (List)(docAttributes.get( pluginKey ));
+							// IMPROVE handle class cast ex
+							int indOfSelf = plugins.indexOf( selfAsPlugin );
+							if ( indOfSelf >= 0 )
 							{
-								docAttributes = (Map)document;
-								if ( docAttributes.containsKey( pluginKey ) )
-								{
-									List plugins = (List)(docAttributes.get( pluginKey ));
-									// IMPROVE handle class cast ex
-									int indOfSelf = plugins.indexOf( selfAsPlugin );
-									if ( indOfSelf >= 0 )
-									{
-										plugins.remove( indOfSelf );
-										docAttributes.put( pluginKey, plugins );
-										translateMd = true;
-										
-									}
-									// else make a copy of the file in the destination folder and break 
-								}
+								plugins.remove( indOfSelf );
+								docAttributes.put( pluginKey, plugins );
 								burysInfo.write( document );
-							}
-							else if ( translateMd )
-							{
-								// check for content thing or next doc
-								if ( document instanceof String )
-								{
-									// this is our markdown
-									String content = (String)document;
-									content = knowsHmtlOutput.render(
-											knowMdInput.parse(content) );
-									burysInfo.write( content );
-								}
-								else
-								{
-									burysInfo.write( document );
-								}
 							}
 							else
 							{
-								burysInfo.write( document );
+								loadsInfo.close();
+								copyFileWithoutChange(new FileReader( path ), charDump);
+								continue;
 							}
 						}
+						else
+						{
+							loadsInfo.close();
+							copyFileWithoutChange(new FileReader( path ), charDump);
+							continue;
+						}
 					}
-					loadsInfo.close();
-					burysInfo.close();
+					document = loadsInfo.read();
+					if ( document == null )
+					{
+						loadsInfo.close();
+						burysInfo.close();
+						continue;
+					}
+					else if ( ! (document instanceof String) )
+					{
+						do
+						{
+							document = loadsInfo.read();
+							burysInfo.write( document );
+						}
+						while ( document != null );
+						loadsInfo.close();
+						burysInfo.close();
+						continue;
+					}
+					else
+					{
+						// this is our markdown
+						String content = (String)document;
+						content = knowsHmtlOutput.render(
+								knowMdInput.parse(content) );
+						burysInfo.write( content );
+					}
+					document = loadsInfo.read();
+					if ( document == null )
+					{
+						loadsInfo.close();
+						burysInfo.close();
+						continue;
+					}
+					else
+					{
+						do
+						{
+							document = loadsInfo.read();
+							burysInfo.write( document );
+						}
+						while ( document != null );
+						loadsInfo.close();
+						burysInfo.close();
+						continue;
+					}
 				}
 				catch ( FileNotFoundException | InvalidPathException ie )
 				{
@@ -359,6 +369,19 @@ public class MudLog
 					System.err.println( here +"file i/o problem "+ ie );
 				}
 			}
+		}
+	}
+
+
+	protected void copyFileWithoutChange( FileReader original,
+			FileWriter duplicate ) throws IOException
+	{
+		int maybeByte;
+		maybeByte = original.read();
+		while ( maybeByte != -1 )
+		{
+			duplicate.write( maybeByte );
+			maybeByte = original.read();
 		}
 	}
 
