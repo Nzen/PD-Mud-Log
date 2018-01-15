@@ -17,6 +17,9 @@ import java.util.Map;
 import com.esotericsoftware.yamlbeans.YamlConfig;
 import com.esotericsoftware.yamlbeans.YamlReader;
 import com.esotericsoftware.yamlbeans.YamlWriter;
+import com.vladsch.flexmark.html.HtmlRenderer;
+import com.vladsch.flexmark.parser.Parser;
+import com.vladsch.flexmark.util.options.MutableDataSet;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -37,6 +40,8 @@ public class MudLog
 	protected Path markdownConfig = null;
 	protected Path yamlConfig = null;
 	protected Path outputFolder = null;
+	protected MutableDataSet mdSettings = null;
+	protected YamlConfig docConfig = null;
 
 	public static void main( String[] args )
 	{
@@ -63,7 +68,10 @@ public class MudLog
 		Rewrite the transformed file in the appropriate place
 		==
 		180108 next:
-		output (echo) provided yaml
+		refine output yaml
+		import md lib
+		(config markdown?)
+		send content through markdown
 
 		https://github.com/vsch/flexmark-java/tree/master/flexmark-java-samples/src/com/vladsch/flexmark/samples
 		*/
@@ -242,8 +250,18 @@ public class MudLog
 	public void adoptConfiguration()
 	{
 		System.out.println( cl +"ad didnt reify config yet" );
-		// configure yaml thing
+		if ( docConfig == null )
+		{
+			docConfig = new YamlConfig();
+		}
+		// configure yaml thing from actual config
+		docConfig.writeConfig.setExplicitFirstDocument( true );
+		docConfig.writeConfig.setExplicitEndDocument( true );
 		// configure md thing
+		if ( mdSettings == null )
+		{
+			mdSettings = new MutableDataSet();
+		}
 	}
 
 
@@ -253,12 +271,11 @@ public class MudLog
 		final String here = cl +"tmo ";
 		if ( paths != null )
 		{
+			adoptConfiguration();
 			YamlReader loadsInfo;
 			YamlWriter burysInfo;
-			// ASK perhaps move to adoptConfiguration()
-			YamlConfig docConfig = new YamlConfig();
-			docConfig.writeConfig.setExplicitFirstDocument( true );
-			docConfig.writeConfig.setExplicitEndDocument( true );
+			Parser knowMdInput = Parser.builder( mdSettings ).build();
+			HtmlRenderer knowsHmtlOutput = HtmlRenderer.builder( mdSettings ).build();
 			for ( String path : paths )
 			{
 				System.out.println( cl +"tmo trans "+ path );
@@ -273,6 +290,7 @@ public class MudLog
 								+ outputFolder.toString() + File.separator
 								+ Paths.get( path ).getFileName() );
 					}
+					
 					loadsInfo = new YamlReader( charLoader );
 					burysInfo = new YamlWriter( charDump );
 					Object document;
@@ -303,6 +321,7 @@ public class MudLog
 										translateMd = true;
 										
 									}
+									// else make a copy of the file in the destination folder and break 
 								}
 								burysInfo.write( document );
 							}
@@ -313,8 +332,8 @@ public class MudLog
 								{
 									// this is our markdown
 									String content = (String)document;
-									content = content.toUpperCase();
-									System.out.println( here +"didnt translate yet" );
+									content = knowsHmtlOutput.render(
+											knowMdInput.parse(content) );
 									burysInfo.write( content );
 								}
 								else
