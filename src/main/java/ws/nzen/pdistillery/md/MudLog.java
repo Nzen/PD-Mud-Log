@@ -124,7 +124,8 @@ public class MudLog
 		}
 		if ( userInput != null )
 		{
-			final String currentDir = "";
+			final String currentDir = ( File.pathSeparator.equals( ":" ) )
+					? "." : ""; // NOTE windows / linux current dir
 			if ( userInput.hasOption( mdConfigFlag ) )
 			{
 				doesStuff.setMarkdownPath( userInput
@@ -135,11 +136,8 @@ public class MudLog
 				doesStuff.setYamlPath( userInput
 						.getOptionValue( yamlConfigFlag, currentDir ) );
 			}
-			if ( userInput.hasOption( outputFolderPath ) )
-			{
-				doesStuff.setOutputPath( userInput
-						.getOptionValue( outputFolderPath, currentDir ) );
-			}
+			doesStuff.setOutputPath( userInput
+					.getOptionValue( outputFolderPath, currentDir ) );
 		}
 		return doesStuff;
 	}
